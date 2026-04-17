@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /root/plugins/codex-email-notify/scripts/email-notify.mjs",
+            "timeout": 30,
+            "statusMessage": "Sending Codex completion email"
+          }
+        ]
+      }
+    ]
+  }
+}

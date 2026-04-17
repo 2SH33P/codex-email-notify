@@ -1,0 +1,14 @@
+{
+  "to": [
+    "your-email@example.com"
+  ],
+  "from": "codex-notify@example.com",
+  "subjectPrefix": "[Codex]",
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "secure": false,
+    "user": "smtp-user@example.com",
+    "pass": "app-password"
+  }
+}

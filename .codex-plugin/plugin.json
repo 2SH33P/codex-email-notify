@@ -1,0 +1,41 @@
+{
+  "name": "codex-email-notify",
+  "version": "0.1.0",
+  "description": "Send an email whenever Codex completes a task by handling native notify payloads in Node.js.",
+  "author": {
+    "name": "Local Codex Workspace",
+    "email": "local@example.com",
+    "url": "https://developers.openai.com/codex"
+  },
+  "homepage": "https://developers.openai.com/codex",
+  "repository": "https://developers.openai.com/codex/plugins/build",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "notify",
+    "email",
+    "smtp",
+    "nodejs"
+  ],
+  "hooks": "./hooks.json",
+  "interface": {
+    "displayName": "Codex Email Notify",
+    "shortDescription": "Emails you when Codex finishes a task.",
+    "longDescription": "A local Node.js plugin that turns Codex task-complete notifications into SMTP email alerts. The bundled notifier script supports both native notify payloads and Stop-hook payloads.",
+    "developerName": "Local Codex Workspace",
+    "category": "Productivity",
+    "capabilities": [
+      "Automation",
+      "Notifications"
+    ],
+    "websiteURL": "https://developers.openai.com/codex",
+    "privacyPolicyURL": "https://openai.com/policies/row-privacy-policy/",
+    "termsOfServiceURL": "https://openai.com/policies/row-terms-of-use/",
+    "defaultPrompt": [
+      "Send me an email when Codex finishes.",
+      "Notify me when a task completes.",
+      "Route Codex completion events to SMTP."
+    ],
+    "brandColor": "#0F766E"
+  }
+}

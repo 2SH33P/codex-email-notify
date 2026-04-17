@@ -1,0 +1,19 @@
+{
+  "name": "codex-email-notify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SMTP email notifications for Codex notify and Stop hook payloads.",
+  "bin": {
+    "codex-email-notify": "./scripts/email-notify.mjs"
+  },
+  "scripts": {
+    "test:dry-run": "node ./scripts/email-notify.mjs --dry-run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "nodemailer": "^8.0.5"
+  }
+}
