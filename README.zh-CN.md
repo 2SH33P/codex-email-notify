@@ -34,11 +34,21 @@
 
 ## 工作方式
 
-这个插件优先使用 Codex 的原生 `notify` 能力。在当前环境中，Codex 配置会在任务完成后执行：
+这个插件优先使用 Codex 的原生 `notify` 能力。
+
+要让插件真正生效，你必须修改你自己的 `~/.codex/config.toml`，加入：
+
+```toml
+notify = ["node", "/绝对路径/codex-email-notify/scripts/email-notify.mjs"]
+```
+
+如果项目路径和当前仓库一致，可以直接写：
 
 ```toml
 notify = ["node", "/root/plugins/codex-email-notify/scripts/email-notify.mjs"]
 ```
+
+不加这行的话，Codex 在任务完成后不会自动调用这个插件，也就不会发邮件。
 
 脚本收到负载后会做几件事：
 
@@ -76,7 +86,13 @@ npm install
 }
 ```
 
-3. 运行干跑测试：
+3. 修改 `~/.codex/config.toml`：
+
+```toml
+notify = ["node", "/root/plugins/codex-email-notify/scripts/email-notify.mjs"]
+```
+
+4. 运行干跑测试：
 
 ```bash
 echo '{"event":"agent-turn-complete","session_id":"s1","turn_id":"t1","cwd":"/root","model":"gpt-5.4","input_messages":[{"role":"user","content":"运行测试并修复失败"}],"last_assistant_message":"测试已经全部通过。"}' \

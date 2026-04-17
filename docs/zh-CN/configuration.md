@@ -82,13 +82,23 @@
 
 ## Codex 原生通知配置
 
-当前环境已在 `~/.codex/config.toml` 中配置：
+要让插件自动运行，你必须修改你自己的 `~/.codex/config.toml`。
+
+最少要加这一行：
+
+```toml
+notify = ["node", "/绝对路径/codex-email-notify/scripts/email-notify.mjs"]
+```
+
+例如，如果项目路径和当前仓库一致：
 
 ```toml
 notify = ["node", "/root/plugins/codex-email-notify/scripts/email-notify.mjs"]
 ```
 
 这表示 Codex 在任务完成后会调用本插件脚本。
+
+如果你没有加这行，就算 SMTP 和收件邮箱都配置正确，Codex 也不会自动触发这个脚本。
 
 ## Hook 回退模式
 

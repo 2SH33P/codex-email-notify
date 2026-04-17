@@ -28,6 +28,24 @@ npm install
 }
 ```
 
+## 修改 Codex 配置
+
+这一步是必须的。
+
+打开你自己的 `~/.codex/config.toml`，加入：
+
+```toml
+notify = ["node", "/绝对路径/codex-email-notify/scripts/email-notify.mjs"]
+```
+
+如果项目路径和当前仓库一致，可以直接写：
+
+```toml
+notify = ["node", "/root/plugins/codex-email-notify/scripts/email-notify.mjs"]
+```
+
+只有加了这项，Codex 在任务完成时才会自动执行插件脚本。
+
 ## 运行逻辑
 
 当 Codex 完成一轮任务后，会调用：

@@ -59,6 +59,24 @@ Example local config:
 }
 ```
 
+## Required Codex Setup
+
+You must register the notifier in your own `~/.codex/config.toml`.
+
+Add:
+
+```toml
+notify = ["node", "/absolute/path/to/codex-email-notify/scripts/email-notify.mjs"]
+```
+
+Example for this repository layout:
+
+```toml
+notify = ["node", "/root/plugins/codex-email-notify/scripts/email-notify.mjs"]
+```
+
+Without this `notify` entry, Codex will not call the plugin after a task completes.
+
 ## Notify wiring
 
 The current workspace is configured to call:
