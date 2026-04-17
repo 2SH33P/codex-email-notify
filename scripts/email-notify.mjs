@@ -34,25 +34,18 @@ async function main() {
     }
 
     if (mergedConfig.dryRun) {
+      log(`Auth preview: ${JSON.stringify(buildAuthPreview(mergedConfig))}`);
       log(`Dry run email preview:\n${JSON.stringify(mail, null, 2)}`);
       return exitGracefully(shouldContinueJson);
     }
 
-    const transporter = nodemailer.createTransport({
-      host: mergedConfig.smtp.host,
-      port: mergedConfig.smtp.port,
-      secure: mergedConfig.smtp.secure,
-      auth:
-        mergedConfig.smtp.user || mergedConfig.smtp.pass
-          ? {
-              user: mergedConfig.smtp.user,
-              pass: mergedConfig.smtp.pass
-            }
-          : undefined
-    });
+    const transportOptions = await buildTransportOptions(mergedConfig);
+    const transporter = nodemailer.createTransport(transportOptions);
 
     await transporter.sendMail(mail);
-    log(`Sent Codex completion email for ${context.turnId ?? context.eventName}.`);
+    log(
+      `Sent Codex completion email for ${context.turnId ?? context.eventName} using ${transportOptions.auth?.type === "OAuth2" ? "OAuth2" : "password"} auth.`
+    );
   } catch (error) {
     log(`Email notification failed: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -85,6 +78,7 @@ async function readJsonStdin() {
 
 async function loadConfig() {
   const fileConfig = await readConfigFile(configPath);
+  const authType = (readString("CODEX_EMAIL_NOTIFY_AUTH_TYPE") ?? fileConfig.authType ?? "auto").toLowerCase();
   const smtp = {
     host: readString("CODEX_EMAIL_NOTIFY_SMTP_HOST") ?? fileConfig.smtp?.host ?? "",
     port: Number(readString("CODEX_EMAIL_NOTIFY_SMTP_PORT") ?? fileConfig.smtp?.port ?? 587),
@@ -92,14 +86,41 @@ async function loadConfig() {
     user: readString("CODEX_EMAIL_NOTIFY_SMTP_USER") ?? fileConfig.smtp?.user ?? "",
     pass: readString("CODEX_EMAIL_NOTIFY_SMTP_PASS") ?? fileConfig.smtp?.pass ?? ""
   };
+  const oauth2 = {
+    provider: (readString("CODEX_EMAIL_NOTIFY_OAUTH2_PROVIDER") ?? fileConfig.oauth2?.provider ?? "microsoft").toLowerCase(),
+    user:
+      readString("CODEX_EMAIL_NOTIFY_OAUTH2_USER") ??
+      fileConfig.oauth2?.user ??
+      smtp.user ??
+      "",
+    clientId: readString("CODEX_EMAIL_NOTIFY_OAUTH2_CLIENT_ID") ?? fileConfig.oauth2?.clientId ?? "",
+    clientSecret: readString("CODEX_EMAIL_NOTIFY_OAUTH2_CLIENT_SECRET") ?? fileConfig.oauth2?.clientSecret ?? "",
+    refreshToken: readString("CODEX_EMAIL_NOTIFY_OAUTH2_REFRESH_TOKEN") ?? fileConfig.oauth2?.refreshToken ?? "",
+    accessToken: readString("CODEX_EMAIL_NOTIFY_OAUTH2_ACCESS_TOKEN") ?? fileConfig.oauth2?.accessToken ?? "",
+    accessTokenExpires: readNumber(
+      "CODEX_EMAIL_NOTIFY_OAUTH2_ACCESS_TOKEN_EXPIRES",
+      fileConfig.oauth2?.accessTokenExpires ?? null
+    ),
+    tenant: readString("CODEX_EMAIL_NOTIFY_OAUTH2_TENANT") ?? fileConfig.oauth2?.tenant ?? "common",
+    tokenUrl:
+      readString("CODEX_EMAIL_NOTIFY_OAUTH2_TOKEN_URL") ??
+      fileConfig.oauth2?.tokenUrl ??
+      "",
+    scope:
+      readString("CODEX_EMAIL_NOTIFY_OAUTH2_SCOPE") ??
+      fileConfig.oauth2?.scope ??
+      "https://outlook.office.com/SMTP.Send offline_access"
+  };
 
   return {
     to: normalizeRecipients(readString("CODEX_EMAIL_NOTIFY_TO") ?? fileConfig.to ?? []),
     from:
       readString("CODEX_EMAIL_NOTIFY_FROM") ??
       fileConfig.from ??
+      oauth2.user ??
       smtp.user ??
       "",
+    authType,
     subjectPrefix:
       readString("CODEX_EMAIL_NOTIFY_SUBJECT_PREFIX") ??
       fileConfig.subjectPrefix ??
@@ -109,7 +130,8 @@ async function loadConfig() {
       readString("CODEX_EMAIL_NOTIFY_STATE_DIR") ??
       fileConfig.stateDir ??
       path.join(os.tmpdir(), "codex-email-notify"),
-    smtp
+    smtp,
+    oauth2
   };
 }
 
@@ -175,6 +197,158 @@ async function claimNotification(context, stateDir) {
   }
 }
 
+async function buildTransportOptions(config) {
+  if (!config.smtp.host) {
+    throw new Error("Missing smtp.host configuration.");
+  }
+
+  return {
+    host: config.smtp.host,
+    port: config.smtp.port,
+    secure: config.smtp.secure,
+    auth: await resolveAuth(config)
+  };
+}
+
+async function resolveAuth(config) {
+  const authMode = detectAuthMode(config);
+  if (authMode === "oauth2") {
+    const token = await resolveOAuth2AccessToken(config.oauth2);
+    return {
+      type: "OAuth2",
+      user: resolveOAuth2User(config),
+      accessToken: token.accessToken,
+      expires: token.expires
+    };
+  }
+
+  return config.smtp.user || config.smtp.pass
+    ? {
+        user: config.smtp.user,
+        pass: config.smtp.pass
+      }
+    : undefined;
+}
+
+function buildAuthPreview(config) {
+  const authMode = detectAuthMode(config);
+  if (authMode === "oauth2") {
+    return {
+      mode: "oauth2",
+      provider: config.oauth2.provider,
+      user: resolveOAuth2User(config),
+      tokenUrl: resolveOAuth2TokenUrl(config.oauth2),
+      hasAccessToken: Boolean(config.oauth2.accessToken),
+      hasRefreshToken: Boolean(config.oauth2.refreshToken),
+      hasClientId: Boolean(config.oauth2.clientId),
+      hasClientSecret: Boolean(config.oauth2.clientSecret),
+      scope: config.oauth2.scope
+    };
+  }
+
+  return {
+    mode: "password",
+    user: config.smtp.user || "",
+    hasPassword: Boolean(config.smtp.pass)
+  };
+}
+
+function detectAuthMode(config) {
+  if (config.authType === "oauth2") {
+    return "oauth2";
+  }
+
+  if (config.authType === "password") {
+    return "password";
+  }
+
+  return hasOAuth2Config(config.oauth2) ? "oauth2" : "password";
+}
+
+function hasOAuth2Config(oauth2) {
+  return Boolean(oauth2?.accessToken || oauth2?.refreshToken || oauth2?.clientId || oauth2?.clientSecret);
+}
+
+function resolveOAuth2User(config) {
+  return config.oauth2.user || config.from || config.smtp.user || "";
+}
+
+function resolveOAuth2TokenUrl(oauth2) {
+  if (oauth2.tokenUrl) {
+    return oauth2.tokenUrl;
+  }
+
+  if (oauth2.provider === "microsoft") {
+    return `https://login.microsoftonline.com/${oauth2.tenant || "common"}/oauth2/v2.0/token`;
+  }
+
+  return "";
+}
+
+async function resolveOAuth2AccessToken(oauth2) {
+  const user = oauth2.user || "";
+  if (!user) {
+    throw new Error("OAuth2 requires oauth2.user or smtp.user.");
+  }
+
+  if (oauth2.accessToken) {
+    return {
+      accessToken: oauth2.accessToken,
+      expires: oauth2.accessTokenExpires ?? undefined
+    };
+  }
+
+  if (!(oauth2.clientId && oauth2.refreshToken)) {
+    throw new Error("OAuth2 requires either accessToken or clientId + refreshToken.");
+  }
+
+  const tokenUrl = resolveOAuth2TokenUrl(oauth2);
+  if (!tokenUrl) {
+    throw new Error("OAuth2 token URL could not be resolved.");
+  }
+
+  const body = new URLSearchParams({
+    client_id: oauth2.clientId,
+    grant_type: "refresh_token",
+    refresh_token: oauth2.refreshToken,
+    scope: oauth2.scope
+  });
+  if (oauth2.clientSecret) {
+    body.set("client_secret", oauth2.clientSecret);
+  }
+
+  const response = await fetch(tokenUrl, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded"
+    },
+    body
+  });
+
+  const tokenPayload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message =
+      typeof tokenPayload.error_description === "string"
+        ? tokenPayload.error_description
+        : typeof tokenPayload.error === "string"
+          ? tokenPayload.error
+          : `HTTP ${response.status}`;
+    throw new Error(`OAuth2 token refresh failed: ${message}`);
+  }
+
+  if (typeof tokenPayload.access_token !== "string" || !tokenPayload.access_token) {
+    throw new Error("OAuth2 token refresh succeeded but no access_token was returned.");
+  }
+
+  return {
+    accessToken: tokenPayload.access_token,
+    expires:
+      typeof tokenPayload.expires_in === "number"
+        ? Date.now() + tokenPayload.expires_in * 1000
+        : undefined
+  };
+}
+
 function buildMail(context, config) {
   if (!config.to.length) {
     return null;
@@ -210,7 +384,7 @@ function buildMail(context, config) {
   ];
 
   return {
-    from: config.from || config.smtp.user || "codex-notify@localhost",
+    from: config.from || config.oauth2.user || config.smtp.user || "codex-notify@localhost",
     to: config.to.join(", "),
     subject,
     text: lines.join("\n")
@@ -324,6 +498,16 @@ function readBoolean(name, fallback) {
   }
 
   return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+}
+
+function readNumber(name, fallback) {
+  const value = process.env[name];
+  if (typeof value !== "string" || !value.trim()) {
+    return typeof fallback === "number" ? fallback : null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function sanitize(value) {

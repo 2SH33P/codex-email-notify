@@ -4,11 +4,20 @@
   ],
   "from": "codex-notify@example.com",
   "subjectPrefix": "[Codex]",
+  "authType": "oauth2",
   "smtp": {
-    "host": "smtp.example.com",
+    "host": "smtp-mail.outlook.com",
     "port": 587,
     "secure": false,
-    "user": "smtp-user@example.com",
-    "pass": "app-password"
+    "user": "your-outlook@example.com"
+  },
+  "oauth2": {
+    "provider": "microsoft",
+    "tenant": "common",
+    "user": "your-outlook@example.com",
+    "clientId": "your-microsoft-app-client-id",
+    "clientSecret": "your-microsoft-app-client-secret",
+    "refreshToken": "your-microsoft-refresh-token",
+    "scope": "https://outlook.office.com/SMTP.Send offline_access"
   }
 }

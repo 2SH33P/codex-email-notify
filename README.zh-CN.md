@@ -7,6 +7,7 @@
 ## 文档目录
 
 - [配置说明](./docs/zh-CN/configuration.md)
+- [Outlook / Microsoft 365 OAuth2 配置指南](./docs/zh-CN/outlook-oauth2-setup.md)
 - [使用说明](./docs/zh-CN/usage.md)
 - [排错指南](./docs/zh-CN/troubleshooting.md)
 
@@ -15,6 +16,7 @@
 - 支持 Codex 原生 `notify` 回调
 - 支持 `Stop` hook 作为回退触发方式
 - 通过 `nodemailer` 发送 SMTP 邮件
+- 支持普通 SMTP 密码认证，也支持 Outlook / Microsoft 365 OAuth2
 - 按 `session_id + turn_id` 去重，避免同一轮任务重复发信
 - 支持 `config.local.json` 和环境变量两种配置方式
 - 支持 `--dry-run` 干跑测试
@@ -76,6 +78,7 @@ npm install
   "to": ["you@example.com"],
   "from": "codex@example.com",
   "subjectPrefix": "[Codex]",
+  "authType": "password",
   "smtp": {
     "host": "smtp.example.com",
     "port": 587,
@@ -85,6 +88,40 @@ npm install
   }
 }
 ```
+
+如果你要接入 Outlook / Microsoft 365 的 OAuth2，可以改成：
+
+```json
+{
+  "to": ["you@example.com"],
+  "from": "your-outlook@example.com",
+  "subjectPrefix": "[Codex]",
+  "authType": "oauth2",
+  "smtp": {
+    "host": "smtp-mail.outlook.com",
+    "port": 587,
+    "secure": false,
+    "user": "your-outlook@example.com"
+  },
+  "oauth2": {
+    "provider": "microsoft",
+    "tenant": "common",
+    "user": "your-outlook@example.com",
+    "clientId": "your-microsoft-app-client-id",
+    "clientSecret": "your-microsoft-app-client-secret",
+    "refreshToken": "your-microsoft-refresh-token",
+    "scope": "https://outlook.office.com/SMTP.Send offline_access"
+  }
+}
+```
+
+说明：
+
+- `authType = "oauth2"` 表示强制使用 OAuth2
+- `tenant` 默认可以先用 `common`
+- 如果你的企业租户有特殊要求，可以把 `tenant` 改成租户 ID 或域名
+- 脚本会用 refresh token 自动换 access token，再通过 SMTP 发信
+- 如果你是小白，推荐先看 [Outlook / Microsoft 365 OAuth2 配置指南](./docs/zh-CN/outlook-oauth2-setup.md)
 
 3. 修改 `~/.codex/config.toml`：
 

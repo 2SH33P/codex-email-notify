@@ -40,6 +40,8 @@
   收件人列表，可以写一个或多个邮箱地址。
 - `from`
   发件人地址。若未填写，脚本会优先回退到 `smtp.user`，再回退到 `codex-notify@localhost`。
+- `authType`
+  认证模式，可选 `password`、`oauth2`、`auto`。默认是 `auto`。
 - `subjectPrefix`
   邮件标题前缀，默认是 `[Codex]`。
 - `smtp.host`
@@ -53,10 +55,61 @@
 - `smtp.pass`
   SMTP 登录密码或应用专用密码。
 
+## OAuth2 配置字段
+
+如果你要使用 Outlook / Microsoft 365 OAuth2，可以增加 `oauth2` 配置块：
+
+```json
+{
+  "authType": "oauth2",
+  "smtp": {
+    "host": "smtp-mail.outlook.com",
+    "port": 587,
+    "secure": false,
+    "user": "your-outlook@example.com"
+  },
+  "oauth2": {
+    "provider": "microsoft",
+    "tenant": "common",
+    "user": "your-outlook@example.com",
+    "clientId": "your-microsoft-app-client-id",
+    "clientSecret": "your-microsoft-app-client-secret",
+    "refreshToken": "your-microsoft-refresh-token",
+    "scope": "https://outlook.office.com/SMTP.Send offline_access"
+  }
+}
+```
+
+字段说明：
+
+- `oauth2.provider`
+  当前默认按 `microsoft` 处理。
+- `oauth2.tenant`
+  微软租户，默认可用 `common`。
+- `oauth2.user`
+  发信邮箱地址，一般和 Outlook 邮箱一致。
+- `oauth2.clientId`
+  微软应用的 Client ID。
+- `oauth2.clientSecret`
+  微软应用的 Client Secret。
+- `oauth2.refreshToken`
+  OAuth2 刷新令牌。脚本会用它自动换新的 access token。
+- `oauth2.accessToken`
+  如果你已经自己拿到了 access token，也可以直接提供。
+- `oauth2.accessTokenExpires`
+  access token 过期时间戳，可选。
+- `oauth2.scope`
+  默认建议使用 `https://outlook.office.com/SMTP.Send offline_access`。
+- `oauth2.tokenUrl`
+  可选。若不填，脚本会自动按微软 v2 token endpoint 生成。
+
+如果你还没有 `clientId` 和 `refreshToken`，先看 [Outlook / Microsoft 365 OAuth2 配置指南](./outlook-oauth2-setup.md)。
+
 ## 环境变量
 
 脚本支持以下环境变量：
 
+- `CODEX_EMAIL_NOTIFY_AUTH_TYPE`
 - `CODEX_EMAIL_NOTIFY_TO`
 - `CODEX_EMAIL_NOTIFY_FROM`
 - `CODEX_EMAIL_NOTIFY_SUBJECT_PREFIX`
@@ -65,6 +118,16 @@
 - `CODEX_EMAIL_NOTIFY_SMTP_SECURE`
 - `CODEX_EMAIL_NOTIFY_SMTP_USER`
 - `CODEX_EMAIL_NOTIFY_SMTP_PASS`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_PROVIDER`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_USER`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_CLIENT_ID`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_CLIENT_SECRET`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_REFRESH_TOKEN`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_ACCESS_TOKEN`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_ACCESS_TOKEN_EXPIRES`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_TENANT`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_TOKEN_URL`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_SCOPE`
 - `CODEX_EMAIL_NOTIFY_DRY_RUN`
 - `CODEX_EMAIL_NOTIFY_STATE_DIR`
 
@@ -73,6 +136,7 @@
 - `CODEX_EMAIL_NOTIFY_TO` 支持逗号分隔多个邮箱。
 - `CODEX_EMAIL_NOTIFY_DRY_RUN` 可以用 `1`、`true`、`yes`、`on` 开启。
 - `CODEX_EMAIL_NOTIFY_STATE_DIR` 用于保存去重标记文件。
+- 如果设置了 `authType=oauth2`，脚本会优先走 OAuth2 认证。
 
 ## 推荐配置方式
 

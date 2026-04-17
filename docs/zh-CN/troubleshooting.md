@@ -40,7 +40,26 @@
 - 使用应用专用密码
 - 或按照服务商要求启用 OAuth / 安全策略
 
-## 5. 收到重复邮件
+如果你使用的是 Outlook / Microsoft 365，建议直接改用 OAuth2。
+
+## 5. Outlook OAuth2 报 `invalid_grant` 或拿不到 token
+
+这通常表示以下几类问题：
+
+- `refreshToken` 已失效
+- `clientId` 或 `clientSecret` 填错
+- `tenant` 填错
+- 没有申请正确的 scope
+- 微软应用没有完成相应的授权配置
+
+建议优先检查：
+
+- `scope` 是否为 `https://outlook.office.com/SMTP.Send offline_access`
+- `tokenUrl` 或 `tenant` 是否对应正确租户
+- `oauth2.user` 是否就是实际发信邮箱
+- 微软后台是否真的给这个应用发放了 refresh token
+
+## 6. 收到重复邮件
 
 本插件已经做了按 `session_id + turn_id` 的去重。
 
@@ -52,7 +71,7 @@
 
 可以通过 `CODEX_EMAIL_NOTIFY_STATE_DIR` 指定固定状态目录，避免临时目录变化影响去重。
 
-## 6. `Stop` hook 没有生效
+## 7. `Stop` hook 没有生效
 
 先确认：
 
@@ -66,7 +85,7 @@
 {"continue": true}
 ```
 
-## 7. 只想验证解析，不想真的发邮件
+## 8. 只想验证解析，不想真的发邮件
 
 使用：
 
@@ -80,7 +99,7 @@ node /root/plugins/codex-email-notify/scripts/email-notify.mjs --dry-run
 export CODEX_EMAIL_NOTIFY_DRY_RUN=true
 ```
 
-## 8. 想切换到环境变量配置
+## 9. 想切换到环境变量配置
 
 完全可以。环境变量优先级高于 `config.local.json`。
 

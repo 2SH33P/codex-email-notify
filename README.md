@@ -8,6 +8,7 @@ This local Codex plugin uses a Node.js notifier to send an email whenever Codex 
 
 - [Chinese README](./README.zh-CN.md)
 - [Chinese configuration guide](./docs/zh-CN/configuration.md)
+- [Chinese Microsoft OAuth2 setup guide](./docs/zh-CN/outlook-oauth2-setup.md)
 - [Chinese usage guide](./docs/zh-CN/usage.md)
 - [Chinese troubleshooting guide](./docs/zh-CN/troubleshooting.md)
 
@@ -16,6 +17,7 @@ This local Codex plugin uses a Node.js notifier to send an email whenever Codex 
 - Codex native `notify` payloads via `~/.codex/config.toml`
 - Codex `Stop` hook payloads via [`hooks.json`](./hooks.json)
 - SMTP delivery through `nodemailer`
+- SMTP password auth and Outlook / Microsoft 365 OAuth2 auth
 - De-duplication by `session_id + turn_id`, so enabling both `notify` and `Stop` will still only send one email per completed turn
 
 ## Files
@@ -31,6 +33,7 @@ Create `config.local.json` in this directory or set environment variables.
 
 Environment variables:
 
+- `CODEX_EMAIL_NOTIFY_AUTH_TYPE`
 - `CODEX_EMAIL_NOTIFY_TO`
 - `CODEX_EMAIL_NOTIFY_FROM`
 - `CODEX_EMAIL_NOTIFY_SUBJECT_PREFIX`
@@ -39,6 +42,16 @@ Environment variables:
 - `CODEX_EMAIL_NOTIFY_SMTP_SECURE`
 - `CODEX_EMAIL_NOTIFY_SMTP_USER`
 - `CODEX_EMAIL_NOTIFY_SMTP_PASS`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_PROVIDER`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_USER`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_CLIENT_ID`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_CLIENT_SECRET`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_REFRESH_TOKEN`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_ACCESS_TOKEN`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_ACCESS_TOKEN_EXPIRES`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_TENANT`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_TOKEN_URL`
+- `CODEX_EMAIL_NOTIFY_OAUTH2_SCOPE`
 - `CODEX_EMAIL_NOTIFY_DRY_RUN`
 - `CODEX_EMAIL_NOTIFY_STATE_DIR`
 
@@ -58,6 +71,39 @@ Example local config:
   }
 }
 ```
+
+Outlook / Microsoft 365 OAuth2 example:
+
+```json
+{
+  "to": ["you@example.com"],
+  "from": "your-outlook@example.com",
+  "subjectPrefix": "[Codex]",
+  "authType": "oauth2",
+  "smtp": {
+    "host": "smtp-mail.outlook.com",
+    "port": 587,
+    "secure": false,
+    "user": "your-outlook@example.com"
+  },
+  "oauth2": {
+    "provider": "microsoft",
+    "tenant": "common",
+    "user": "your-outlook@example.com",
+    "clientId": "your-microsoft-app-client-id",
+    "clientSecret": "your-microsoft-app-client-secret",
+    "refreshToken": "your-microsoft-refresh-token",
+    "scope": "https://outlook.office.com/SMTP.Send offline_access"
+  }
+}
+```
+
+Notes:
+
+- Set `authType` to `oauth2` to force OAuth2 mode.
+- The script defaults to the Microsoft v2 token endpoint under `https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token`.
+- Use `tenant = "common"` as a broad default, or replace it with your tenant ID or domain.
+- For a beginner-friendly path, use `npm run token:microsoft -- --client-id <CLIENT_ID>` to get a refresh token through Microsoft device sign-in.
 
 ## Required Codex Setup
 
